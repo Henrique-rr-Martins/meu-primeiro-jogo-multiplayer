@@ -79,31 +79,26 @@
 
                 //Função responsavel por mover o jogador
                 function movePlayer(command){
-                    console.log(`game.movePlayer() -> Moving ${command.playerId} with ${command.keyPressed}`)
                     
                     //PATTERN: OBJECT LITERALS
                     //Objeto que possui as funções executadas ao usar o teclado.
                     const acceptedMoves = {
                         ArrowUp(player){
-                            console.log('game.movePlayer().arrowUp() -> Moving player up')
                             if(player.y - 1 >= 0){
                                 player.y = player.y - 1
                             }
                         },
                         ArrowRight(player){
-                            console.log('Moving player right')
                             if(player.x + 1 < screen.width){
                                 player.x = player.x + 1
                             }
                         },
                         ArrowDown(player){
-                            console.log('Moving player down')
                             if(player.y + 1 < screen.height){
                                 player.y = player.y + 1
                             }
                         },
                         ArrowLeft(player){
-                            console.log('Moving player left')
                             if(player.x - 1 >= 0){
                                 player.x = player.x - 1
                             }
@@ -112,8 +107,10 @@
 
                     //Command possui a key pressionada
                     const keyPressed = command.keyPressed
+
+                    const playerId = command.playerId
                     //Command possui a referência de jogador
-                    const player = state.players[command.playerId]
+                    const player = state.players[playerId]
                     //Obj recebe a propriedade do objeto acceptedMoves que possui o mesmo nome que a key pressionada
                     const moveFunction = acceptedMoves[keyPressed]
 
@@ -121,22 +118,20 @@
                     if(player && moveFunction){
                         //Então será executada a função referente a propriedade
                         moveFunction(player)
-                        checkForFruitCollision()
+                        checkForFruitCollision(playerId)
                     }
                 }
 
-                function checkForFruitCollision(){
-                    for(const playerId in state.players){
-                        const player = state.players[playerId]
+                function checkForFruitCollision(playerId){
+                    const player = state.players[playerId]
 
-                        for(const fruitId in state.fruits){
-                            const fruit = state.fruits[fruitId]
-                            console.log(`Checking ${playerId} and ${fruitId}`)
+                    for(const fruitId in state.fruits){
+                        const fruit = state.fruits[fruitId]
+                        console.log(`Checking ${playerId} and ${fruitId}`)
 
-                            if(player.x === fruit.x && player.y === fruit.y){
-                                console.log(`Collision between ${playerId} and ${fruitId}`)
-                                removeFruit({ fruitId: fruitId })
-                            }
+                        if(player.x === fruit.x && player.y === fruit.y){
+                            console.log(`Collision between ${playerId} and ${fruitId}`)
+                            removeFruit({ fruitId: fruitId })
                         }
                     }
                 }
@@ -173,7 +168,6 @@
 
                 //Utiliza obj command que possui player e comportamento do keyboard
                 function notifyAll(command){
-                    console.log(`keyboardListener -> Notifying ${state.observers.length} observers`)
 
                     for(const observerFunction of state.observers){
                         observerFunction(command)
