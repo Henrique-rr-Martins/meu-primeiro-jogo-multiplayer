@@ -1,0 +1,234 @@
+<!--
+    Comandos para rodar as informações no container do gitopd:
+    NOTA: usar o modulo chamado serve. Uma vez rodando, transforma a pasta que rodou num servidor estático.
+    2. npx serve
+        a. NOTA: npx vem junto com npm. Vai baixar temporariamente o serve e vai rodar.
+
+    Comando rodar servidor estático em máquina local
+    1. npm install http-server -g
+    2. http-server -a localhost -p 80
+-->
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Client online</title>
+        <style>
+            #screen{
+                border: 10px solid #ccc;
+                image-rendering: pixelated;
+                image-rendering: crisp-edges;
+                image-rendering: -moz-crisp-edges;
+                width: 400px;
+                height: 400px;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="screen" width="10" height="10"></canvas>
+        <script>
+            const screen = document.getElementById('screen') 
+            const context = screen.getContext('2d')
+            const currentPlayerId = 'player1'
+
+            
+            function createGame(){
+                const state = {
+                    players: {},
+                    fruits: {}
+                }
+
+                //Adiciona uma propriedade à propriedade do estado do jogo
+                //Essa propriedade será a representação de game através do id playerId
+                //e das coordenadas (x, y)
+                function addPlayer(command){
+                    const playerId = command.playerId
+                    const playerX = command.playerX
+                    const playerY = command.playerY
+
+                    //Nomeia a propriedade e da a ela o objeto como valor
+                    state.players[playerId] = {
+                        x: playerX,
+                        y: playerY
+                    }
+                }
+
+                //Remove o player através do id
+                function removePlayer(command){
+                    const playerId = command.playerId
+
+                    //delete: Comando do js para apagar uma propriedade de um obj
+                    delete state.players[playerId]
+                }
+
+                function addFruit(command){
+                    const fruitId = command.fruitId
+                    const fruitX = command.fruitX
+                    const fruitY = command.fruitY
+
+                    state.fruits[fruitId] = {
+                        x: fruitX,
+                        y: fruitY
+                    }
+                }
+
+                function removeFruit(command){
+                    const fruitId = command.fruitId
+
+                    delete state.fruits[fruitId]
+                }
+
+                //Função responsavel por mover o jogador
+                function movePlayer(command){
+                    console.log(`game.movePlayer() -> Moving ${command.playerId} with ${command.keyPressed}`)
+                    
+                    //PATTERN: OBJECT LITERALS
+                    //Objeto que possui as funções executadas ao usar o teclado.
+                    const acceptedMoves = {
+                        ArrowUp(player){
+                            console.log('game.movePlayer().arrowUp() -> Moving player up')
+                            if(player.y - 1 >= 0){
+                                player.y = player.y - 1
+                            }
+                        },
+                        ArrowRight(player){
+                            console.log('Moving player right')
+                            if(player.x + 1 < screen.width){
+                                player.x = player.x + 1
+                            }
+                        },
+                        ArrowDown(player){
+                            console.log('Moving player down')
+                            if(player.y + 1 < screen.height){
+                                player.y = player.y + 1
+                            }
+                        },
+                        ArrowLeft(player){
+                            console.log('Moving player left')
+                            if(player.x - 1 >= 0){
+                                player.x = player.x - 1
+                            }
+                        }
+                    }
+
+                    //Command possui a key pressionada
+                    const keyPressed = command.keyPressed
+                    //Command possui a referência de jogador
+                    const player = state.players[command.playerId]
+                    //Obj recebe a propriedade do objeto acceptedMoves que possui o mesmo nome que a key pressionada
+                    const moveFunction = acceptedMoves[keyPressed]
+
+                    //Se a key pressionada existir como nome de propriedade do objeto
+                    if(player && moveFunction){
+                        //Então será executada a função referente a propriedade
+                        moveFunction(player)
+                        checkForFruitCollision()
+                    }
+                }
+
+                function checkForFruitCollision(){
+                    for(const playerId in state.players){
+                        const player = state.players[playerId]
+
+                        for(const fruitId in state.fruits){
+                            const fruit = state.fruits[fruitId]
+                            console.log(`Checking ${playerId} and ${fruitId}`)
+
+                            if(player.x === fruit.x && player.y === fruit.y){
+                                console.log(`Collision between ${playerId} and ${fruitId}`)
+                                removeFruit({ fruitId: fruitId })
+                            }
+                        }
+                    }
+                }
+
+                return {
+                    addPlayer,
+                    removePlayer,
+                    addFruit,
+                    removeFruit,
+                    state,
+                    movePlayer
+                }
+            }
+
+            const game = createGame()
+            const keyboardListener = createKeyboardListener()
+            keyboardListener.subscribe(game.movePlayer)
+
+            //TESTE
+            game.addPlayer({playerId: 'player1', playerX: 4, playerY:4})
+            game.addFruit({fruitId: 'fruit1', fruitX: 4, fruitY:4})
+
+            //Ouve o teclado
+            function createKeyboardListener(){
+                //Guarda os observers como state
+                const state = {
+                    observers: []
+                }
+
+                //Carrega as funções de observer na lista
+                function subscribe(observerFunction){
+                    state.observers.push(observerFunction)
+                }
+
+                //Utiliza obj command que possui player e comportamento do keyboard
+                function notifyAll(command){
+                    console.log(`keyboardListener -> Notifying ${state.observers.length} observers`)
+
+                    for(const observerFunction of state.observers){
+                        observerFunction(command)
+                    }
+                }
+
+                document.addEventListener('keydown', handleKeydown)
+
+                function handleKeydown(event){
+                    const keyPressed = event.key
+
+                    const command = {
+                        playerId: 'player1',
+                        keyPressed
+                    }
+
+                    notifyAll(command)
+
+                }
+
+                return {
+                    subscribe
+                }
+
+            }
+
+            //Função de renderização com recursividade
+            renderScreen()
+
+            function renderScreen(){
+                //Limpa tela
+                context.clearRect(0, 0, screen.width, screen.height)
+
+                //Cor dos players
+                context.fillStyle = 'black'
+                //para cada player
+                for(const playerId in game.state.players){
+                    const player = game.state.players[playerId]
+                    //desenhe
+                    context.fillRect(player.x, player.y, 1, 1)
+                }
+
+                //Cor das frutas
+                context.fillStyle = 'green'
+                //Para cada fruta
+                for(const fruitId in game.state.fruits){
+                    const fruit = game.state.fruits[fruitId]
+                    //Desenhe
+                    context.fillRect(fruit.x, fruit.y, 1, 1)
+                }
+
+                //Método eficiente que fica renderizando de forma eficiente
+                //Se usar outro app, a chamada do método reduz economizando processamento
+                requestAnimationFrame(renderScreen)
+            }
+        </script>
+    </body>
+</html>
